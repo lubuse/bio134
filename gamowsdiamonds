@@ -1,0 +1,87 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Oct 21 12:41:11 2022
+
+@author: lukas
+"""
+import time
+start_time = time.time()
+
+bases = ['A','T','C','G']
+codons = []
+for b1 in bases: # creates list of codons
+    for b2 in bases:
+        for b3 in bases:
+            codons.append(b1+b2+b3)
+
+def antibase(base): # flips bases
+    if base == 'A':
+        return 'T'
+    elif base == 'T':
+        return 'A'
+    elif base == 'G':
+        return 'C'
+    elif base == 'C':
+        return 'G'
+
+def diamondmaker(codon): # used in equivalent(), returns list of possible diamonds of a codon
+    diamonds = []
+    diamonds.append(codon[0]+codon[1]+antibase(codon[2])+antibase(codon[1]))
+    diamonds.append(codon[0]+antibase(codon[1])+antibase(codon[2])+codon[1])
+    diamonds.append(antibase(codon[2])+codon[1]+codon[0]+antibase(codon[1]))
+    diamonds.append(antibase(codon[2])+antibase(codon[1])+codon[0]+codon[1])
+    return diamonds
+
+def equivalent(codon1, codon2): # checks if 2 codons share a diamond
+    if sorted(diamondmaker(codon1)) == sorted(diamondmaker(codon2)):
+        return True
+    else:
+        return False
+    
+def diamonds1(codons): # list placing algorithm, returns list of lists
+    diamondlist = []
+    for i, codon1 in enumerate(codons): # iterates through codons
+        found = False
+        if diamondlist == []: # only adds first codon
+            diamondlist.append([codon1])
+            d_index = 0
+        for j, diamond in enumerate(diamondlist): # searches diamondlist for codon1
+            if codon1 in diamond:
+                d_index = j # marks location of codon1
+                found = True
+                break
+        if not found:
+            diamondlist.append([codon1]) # adds codon1
+            d_index = len(diamondlist) - 1 # marks location of codon1
+        for codon2 in codons[i+1:]: # tests codon1 against all following codons
+            if equivalent(codon1, codon2) and codon2 not in diamondlist[d_index]:
+                diamondlist[d_index].append(codon2) # if codon2 is equivalent, it is appended to codon1
+    for sublist in diamondlist: # sorts sublists
+        sublist.sort()
+    diamondlist.sort()
+    return diamondlist
+
+def diamonds2(codons): #alternative list placing algorithm (barely slower, surprisingly)
+    diamondlist = []
+    for codon1 in codons:
+        placed = False # resets placed, which checks if codon1 has been placed in a diamond
+        if diamondlist == []: # only adds first codon
+            diamondlist.append([codon1])
+            placed = True
+        if placed == False:
+            for j, diamond in enumerate(diamondlist):
+                for codon2 in diamond:
+                    if equivalent(codon1, codon2) and placed == False:
+                        diamondlist[j].append(codon1) # codon1 is placed in the same diamond as the previously placed equivalent
+                        placed = True
+        if placed == False:
+            diamondlist.append([codon1]) # if no equivalent has been found, a new diamond is appended
+            placed = True
+    for sublist in diamondlist: # sorts sublists
+        sublist.sort()
+    diamondlist.sort()
+    return(diamondlist)
+
+print(diamonds2(codons)[1][2])
+print("--- %s seconds ---" % (time.time() - start_time))
+
