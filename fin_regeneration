@@ -1,0 +1,105 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Nov 17 13:01:04 2022
+
+@author: lukas
+"""
+import numpy as np
+import matplotlib.pyplot as plt
+
+# takes file and converts data to list of lists
+def data_list(file):
+    fin_file = open(file, 'r')
+    fin_data = fin_file.readlines()
+    fin_file.close()
+    fin_list = []
+    for i, string in enumerate(fin_data):
+        string.strip()
+        fin_list.append([int(string[0])])
+        fin_list[i].append(str(string[2:4]))
+        fin_list[i].append(float(string[5:]))  
+    return fin_list
+
+l_before = data_list('bif_before.txt')
+l_after = data_list('bif_after.txt')
+
+# takes a fish number and a ray and calculates bifurcation ratio using datalist()
+def list_ratio(fish, ray):
+    for item in l_after:
+        if fish in item and ray in item:
+            bd_after = item[2]
+    for item in l_before:
+        if fish in item and ray in item:
+            bd_before = item[2]
+    return bd_after / bd_before
+
+# takes file and converts data to dictionary
+def data_dict(file):
+    fin_dict = {}
+    fin_list = data_list(file)
+    for item in fin_list:
+        if item[1] not in fin_dict:
+            fin_dict[item[1]] = {}
+        fin_dict[item[1]][item[0]] = item[2]
+    return fin_dict
+
+d_before = data_dict('bif_before.txt')
+d_after = data_dict('bif_after.txt')
+
+def ray_dictionary():
+   rays = {}
+   for i in range(9): 
+      s = 'D' + str(i+1)
+      rays[s] = i 
+   for i in range(9):
+      s = 'V' + str(9-i)
+      rays[s] = i + 9 
+   return rays
+
+def names_of_rays(rays):
+    ray_names = 18*['']
+    for ray in rays:
+        ray_names[rays[ray]] = ray
+    return ray_names
+   
+# takes data_list() and creates array (y coord = ray, x coord = fish)
+def data_array(lys):
+    rays = ray_dictionary()
+    fin_array = np.zeros((18,7)) + np.nan
+    for item in lys:
+        y = rays[item[1]]
+        x = item[0] - 1
+        fin_array[(y,x)] = item[2]
+    return fin_array
+
+a_before = data_array(l_before)
+a_after = data_array(l_after)
+ratio_array = a_after / a_before
+
+def array_ratio(fish):
+    before_slice = a_before[:,fish-1]
+    after_slice = a_after[:,fish-1]
+    ratios = after_slice / before_slice
+    return(ratios)
+
+def array_mean_ratio():
+    mean_ratios = np.zeros(18, float)
+    for i in range(18):
+        mean_ratios[i] = np.nanmean(ratio_array[i,:])
+    return mean_ratios
+
+def plotting(ratios, mean_ratios):
+    ray_names = names_of_rays(ray_dictionary())
+    plt.figure()
+    ax = plt.gca()
+    for fishindex in range(ratios.shape[1]):
+        ax.plot(ratios[:,fishindex],'.',label = 'fish {:d}'.format(fishindex+1))
+    ax.plot(mean_ratios,'k',label = 'mean ratios')
+    plt.legend(['fish 1', 'fish 2', 'fish 3', 'fish 4', 'fish 5', 'fish 6', 'fish 7', 'mean'])
+    plt.title('Change in bifurcation distances upon fin regeneration.')
+    plt.xlabel('Ray')
+    plt.ylabel('Relative change in bifurcation distance')
+    ax.set_xticks(range(len(ray_names)))
+    ax.set_xticklabels(ray_names)
+    
+plotting(ratio_array, array_mean_ratio())
