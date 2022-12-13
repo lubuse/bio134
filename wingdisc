@@ -1,0 +1,144 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Nov 23 11:08:51 2022
+
+@author: lukas
+"""
+
+import numpy as np
+import math
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
+
+# takes file specifications ('cv' or 'vp') 
+# returns list of lists of cell vertices or vertex positions
+# now set to: 'large'
+def open_file(cvvp):
+    wd_file = open('wingdisc/wd-large/{}.txt'.format(cvvp), 'r')
+    lys = wd_file.readlines()
+    wd_file.close()
+    list_list = []
+    for sub in lys:
+        sub = sub.strip()
+        sub = sub.split()
+        sub2 = []
+        for number in sub:
+            if cvvp == 'cv':
+                sub2.append(int(number))
+            else:
+                sub2.append(float(number))
+        list_list.append(sub2)
+    return list_list
+
+# returns two lists of lists
+# lists = x or y coords, sublists = coords of each vertex of cell i
+def cell_positions():
+    list_cv = open_file('cv')
+    list_vp = open_file('vp')
+    x = []
+    y = []
+    for i, cell in enumerate(list_cv):
+        x.append([])
+        y.append([])
+        for vertex in cell:
+            x[i].append(list_vp[vertex][0])
+            y[i].append(list_vp[vertex][1])
+    return x, y
+
+# returns array of cell areas
+def cell_area():
+    x, y = cell_positions()
+    areas = []
+    for i, x_cell in enumerate(x):
+        A = 0
+        for j in range(len(x_cell)):
+            A += (x_cell[j] * y[i][j-1]) - (y[i][j] * x_cell[j-1])
+        areas.append(A*0.5)
+    return np.array(areas)
+  
+# returns 2 arrays of centroid x and y coords
+def centroid():
+    x, y = cell_positions()
+    areas = cell_area()
+    centroid_x = []
+    centroid_y = []
+    for i in range(len(x)):
+        c_x = 0
+        c_y = 0
+        for j in range(len(x[i])):
+            c_x += (x[i][j] + x[i][j-1]) * ((x[i][j] * y[i][j-1]) - (y[i][j] * x[i][j-1]))
+            c_y += (y[i][j] + y[i][j-1]) * ((x[i][j] * y[i][j-1]) - (y[i][j] * x[i][j-1]))
+        centroid_x.append(c_x / (6 * areas[i]))
+        centroid_y.append(c_y / (6 * areas[i]))
+    return np.array(centroid_x), np.array(centroid_y)     
+
+# returns array of centroid distances from 0,0
+def d_centroid():
+    x, y = centroid()
+    distances = []
+    for i in range(len(x)):
+        d = math.sqrt((x[i]**2 + y[i]**2)) # pythagoras
+        distances.append(d)
+    return np.array(distances)
+
+# scatterplot & linear regression of cell areas vs. distance from center
+def plotting():
+    area = cell_area()
+    d = d_centroid()
+    m, b = np.polyfit(d, area, 1)
+    print(m, b)
+    plt.figure()
+    plt.plot(d, area, 'o')
+    plt.plot(d, m * d + b)
+    plt.xlabel('distance from wing disc center')
+    plt.ylabel('cell area')
+    plt.show()
+
+# performs student's t-test on difference in area between
+# inner half and outer half of cells
+def students_t():
+    area = cell_area()
+    d = d_centroid()
+    a = area[d <= (max(d)/2)]
+    b = area[d > (max(d)/2)]
+    return stats.ttest_ind(a, b)
+
+#function to draw the wing disc
+def draw_disc():
+    cpx, cpy = cell_positions()
+    area = cell_area()
+    size = 'large'    
+    polygs = []
+    for i in range(len(cpx)):
+    	polyg = []
+    	for j in range(len(cpx[i])):
+    		polyg.append([cpx[i][j], cpy[i][j]])
+    	polygs.append(Polygon(polyg))
+    patches = PatchCollection(polygs)
+    patches.set_cmap('jet')
+    colors = 1 * area
+    colors[colors>14] = 14 # color value for all the mitotic cells (area>14) is set to 14
+    patches.set_array(np.array(colors)) #for colors
+
+    fig = plt.figure()
+    panel = fig.add_subplot(1,1,1)
+    panel.add_collection(patches)
+    color_bar = fig.colorbar(patches)
+    color_bar.set_label('Cell area (um2)', rotation = 270, labelpad = 15)
+    panel.set_xlim(-120, 110)
+    panel.set_ylim(-85, 85)
+    panel.set_aspect('equal')
+    plt.title(size+' wing disc')
+
+# calls all functions relevant for analysis
+def analyze_disc():
+    draw_disc()
+    plotting()
+    print('Result of students t-test:', students_t())
+
+analyze_disc()
+
+
+
