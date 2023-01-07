@@ -1,0 +1,52 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Nov 29 09:34:56 2022
+
+@author: lukas
+"""
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+# takes specifications, returns lists of #fox, #rabbits and times
+def pp_model(days, time_adj, foxes, rabbits):
+    foxlist = []
+    rabbitlist = []
+    timeseries = []
+    for i in range(days*time_adj): # adjusted to day, hour or minute intervals
+        d_rabbits = (rabbits*0.05) - (0.0002*foxes*rabbits) # change in rabbits
+        d_foxes = -(foxes*0.1) + (0.0001*foxes*rabbits) # change in foxes
+        rabbits += d_rabbits/time_adj
+        rabbitlist.append(rabbits)
+        foxes += d_foxes/time_adj
+        foxlist.append(foxes)
+        timeseries.append(i)
+    return foxlist, rabbitlist, timeseries
+
+# a unitless predator prey model
+def lotka_volterra(x, y, k, t):
+    x_list = []
+    y_list = []
+    timeseries = list(range(t))
+    for i in timeseries:
+        dx = x - x*y
+        x_list.append(x + dx)
+        dy = x*y - k*y
+        y_list.append(y + dy)
+    return x_list, y_list, timeseries
+
+# takes specifications, shows plot of populations vs. time
+def plotting(xdata, ydata, t):
+    t = np.array(t)
+    t = t/24
+    plt.figure()
+    plt.plot(t, xdata, label = 'foxes')
+    plt.plot(t, ydata, label = 'rabbits')
+    plt.xlabel('days')
+    plt.ylabel('no. of individuals')
+    plt.legend()
+    plt.show()
+
+xdata, ydata, time = lotka_volterra(2, 1, 2, 10) 
+
+plotting(xdata, ydata, time)
